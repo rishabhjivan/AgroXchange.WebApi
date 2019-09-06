@@ -5,6 +5,16 @@ VisualStudioVersion = 14.0.25420.1
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AgroXchange.WebApi", "AgroXchange.WebApi\AgroXchange.WebApi.csproj", "{4BA4955D-82D5-45BE-8E53-E5953904F4EB}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "PublishScripts", "PublishScripts", "{78ABCB38-8867-4CFC-B494-2B37AA1C6D2F}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Scripts", "Scripts", "{5EF81D3E-486F-4DF3-9040-F5D0E77AE11B}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Templates", "Templates", "{E773BF57-ED8B-424B-A36C-7823420430CA}"
+	ProjectSection(SolutionItems) = preProject
+		PublishScripts\Templates\AgroXchangeWebApi.json = PublishScripts\Templates\AgroXchangeWebApi.json
+		PublishScripts\Templates\AgroXchangeWebApi.param.dev.json = PublishScripts\Templates\AgroXchangeWebApi.param.dev.json
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -18,5 +28,9 @@ Global
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{5EF81D3E-486F-4DF3-9040-F5D0E77AE11B} = {78ABCB38-8867-4CFC-B494-2B37AA1C6D2F}
+		{E773BF57-ED8B-424B-A36C-7823420430CA} = {78ABCB38-8867-4CFC-B494-2B37AA1C6D2F}
 	EndGlobalSection
 EndGlobal
