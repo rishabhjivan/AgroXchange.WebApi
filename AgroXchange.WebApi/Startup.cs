@@ -15,6 +15,7 @@ using Microsoft.IdentityModel.Tokens;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using AgroXchange.WebApi.Helpers;
 using AgroXchange.WebApi.Services;
+using AgroXchange.Data;
 
 namespace AgroXchange.WebApi
 {
@@ -59,6 +60,8 @@ namespace AgroXchange.WebApi
                     ValidateAudience = false
                 };
             });
+
+            //services.AddDbContext<EFDataContext>(options => options.(appSettings.DBConnectionString));
 
             // configure DI for application services
             services.AddScoped<IUserService, UserService>();

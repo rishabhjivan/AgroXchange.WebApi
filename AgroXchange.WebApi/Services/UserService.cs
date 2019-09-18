@@ -6,25 +6,24 @@ using System.Security.Claims;
 using System.Text;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
-using AgroXchange.WebApi.Models;
+using Microsoft.AspNetCore.Identity;
 using AgroXchange.WebApi.Helpers;
+using AgroXchange.WebApi.Models;
 
 namespace AgroXchange.WebApi.Services
 {
+    //Use https://passwordsgenerator.net/ for strong random strings
     public interface IUserService
     {
-        UserAuthResponse Authenticate(string username, string password);
-        IEnumerable<User> GetAll();
+        string GenerateToken(Guid userId);
+
+        string GeneratePasswordHash(UserView user, string password);
+
+        bool VerifyPasswordHash(UserView user, string passwordHash, string password);
     }
 
     public class UserService : IUserService
     {
-        // users hardcoded for simplicity, store in a db with hashed passwords in production applications
-        private List<User> _users = new List<User>
-        {
-            new User { Id = Guid.Parse("dc1b6700-1a73-42e7-bebd-4df1fb37e274"), FirstName = "Test", LastName = "User", EmailId = "demo@agroxchange.ng", Password = "abc123", Role = "Farmer" }
-        };
-
         private readonly AppSettings _appSettings;
 
         public UserService(IOptions<AppSettings> appSettings)
@@ -32,14 +31,8 @@ namespace AgroXchange.WebApi.Services
             _appSettings = appSettings.Value;
         }
 
-        public UserAuthResponse Authenticate(string username, string password)
+        public string GenerateToken(Guid userId)
         {
-            var user = _users.SingleOrDefault(x => x.EmailId == username && x.Password == password);
-
-            // return null if user not found
-            if (user == null)
-                return null;
-
             // authentication successful so generate jwt token
             var tokenHandler = new JwtSecurityTokenHandler();
             var key = Encoding.ASCII.GetBytes(_appSettings.Secret);
@@ -47,29 +40,26 @@ namespace AgroXchange.WebApi.Services
             {
                 Subject = new ClaimsIdentity(new Claim[]
                 {
-                    new Claim(ClaimTypes.Name, user.Id.ToString())
+                    new Claim(ClaimTypes.Name, userId.ToString())
                 }),
                 Expires = DateTime.UtcNow.AddDays(7),
                 SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature)
             };
             var token = tokenHandler.CreateToken(tokenDescriptor);
-            var resp = new UserAuthResponse();
-            resp.User = user;
-            resp.Token = tokenHandler.WriteToken(token);
-
-            // remove password before returning
-            user.Password = null;
-
-            return resp;
+            string tokenStr = tokenHandler.WriteToken(token);
+            return tokenStr;
         }
 
-        public IEnumerable<User> GetAll()
+        public string GeneratePasswordHash(UserView user, string password)
         {
-            // return users without passwords
-            return _users.Select(x => {
-                x.Password = null;
-                return x;
-            });
+            user.Password = "";
+            return new PasswordHasher<UserView>().HashPassword(user, password + _appSettings.PasswordSalt);
+        }
+
+        public bool VerifyPasswordHash(UserView user, string passwordHash, string password)
+        {
+            user.Password = "";
+            return new PasswordHasher<UserView>().VerifyHashedPassword(user, passwordHash, password + _appSettings.PasswordSalt) != PasswordVerificationResult.Failed;
         }
     }
 }

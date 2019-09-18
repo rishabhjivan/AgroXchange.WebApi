@@ -2,7 +2,7 @@
 
 namespace AgroXchange.WebApi.Models
 {
-    public class User
+    public class UserView
     {
         public Guid Id { get; set; }
         public string FirstName { get; set; }
@@ -14,7 +14,7 @@ namespace AgroXchange.WebApi.Models
 
     public class UserAuthResponse
     {
-        public User User { get; set; }
+        public UserView User { get; set; }
         public string Token { get; set; }
     }
 }

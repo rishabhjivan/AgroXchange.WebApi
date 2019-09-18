@@ -6,6 +6,9 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
 using AgroXchange.WebApi.Services;
 using AgroXchange.WebApi.Models;
+using AgroXchange.WebApi.Utils;
+using AgroXchange.Data;
+using AgroXchange.Data.Models;
 
 namespace AgroXchange.WebApi.Controllers
 {
@@ -23,21 +26,84 @@ namespace AgroXchange.WebApi.Controllers
 
         [AllowAnonymous]
         [HttpPost("authenticate")]
-        public IActionResult Authenticate([FromBody]User userParam)
+        public IActionResult Authenticate([FromBody]UserView userParam)
         {
-            var user = _userService.Authenticate(userParam.EmailId, userParam.Password);
+            try
+            {
+                EFDataContext _dbContext = new EFDataContext();
+                UserView dbUser = _dbContext.Users
+                    .Where(u => u.EmailId == userParam.EmailId.ToLower() 
+                        && !u.LockedOut && u.Activated)
+                    .Select(u => new UserView {
+                        Id = u.UserId,
+                        EmailId = u.EmailId,
+                        FirstName = u.FirstName,
+                        LastName = u.LastName,
+                        Role = u.UserRole.RoleName,
+                        Password = u.PasswordHash
+                    })
+                    .FirstOrDefault();
+                if (dbUser == null)
+                    throw new ApiException("Either username or password is incorrect or user is not activated or locked out");
+                string hash = dbUser.Password;
+                if (!_userService.VerifyPasswordHash(dbUser, hash, userParam.Password))
+                    throw new ApiException("Username or password is incorrect");
 
-            if (user == null)
+                var token = _userService.GenerateToken(dbUser.Id);
+
+                if (token == null)
+                    throw new ApiException("Username or password is incorrect");
+
+                var resp = new UserAuthResponse();
+                UserView userResp = new UserView {
+                    Id = dbUser.Id,
+                    EmailId = dbUser.EmailId,
+                    FirstName = dbUser.FirstName,
+                    LastName = dbUser.LastName,
+                    Role = dbUser.Role
+                };
+                resp.User = userResp;
+                resp.Token = token;
+
+                return Ok(resp);
+            }
+            catch (Exception ex)
+            {
+                if (ex is ApiException)
+                    return BadRequest(ex);
                 return BadRequest(new { message = "Username or password is incorrect" });
-
-            return Ok(user);
+            }
         }
 
-        [HttpGet]
-        public IActionResult GetAll()
+        [AllowAnonymous]
+        [HttpPost]
+        public IActionResult PostUser([FromBody]UserView userParam)
         {
-            var users = _userService.GetAll();
-            return Ok(users);
+            try
+            {
+                EFDataContext _dbContext = new EFDataContext();
+                User newUser = new User();
+                newUser.UserId = userParam.Id = Guid.NewGuid();
+                newUser.FirstName = userParam.FirstName;
+                newUser.LastName = userParam.LastName;
+                newUser.EmailId = userParam.EmailId.ToLower();
+                newUser.PasswordHash = _userService.GeneratePasswordHash(userParam, userParam.Password);
+                newUser.PasswordSalt = "-";
+                newUser.DateCreated = DateTime.UtcNow;
+                newUser.Activated = true; //TODO: need to change to false when email and key are implemented
+                newUser.ActivationKey = "";
+                newUser.LockedOut = false;
+                newUser.RoleId = _dbContext.Roles.Where(r => r.RoleName == userParam.Role).Select(r => r.RoleId).FirstOrDefault();
+                _dbContext.Users.Add(newUser);
+                _dbContext.SaveChanges();
+                return Ok();
+            }
+            catch (Exception ex)
+            {
+                if (ex is ApiException)
+                    return BadRequest(ex);
+                return BadRequest(new { message = "Error saving new user. Please try again." });
+            }
         }
     }
 }
