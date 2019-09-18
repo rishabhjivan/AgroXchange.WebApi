@@ -70,7 +70,7 @@ namespace AgroXchange.WebApi.Controllers
             catch (Exception ex)
             {
                 if (ex is ApiException)
-                    return BadRequest(ex);
+                    return BadRequest(new { message = ex.Message });
                 return BadRequest(new { message = "Username or password is incorrect" });
             }
         }
@@ -101,7 +101,9 @@ namespace AgroXchange.WebApi.Controllers
             catch (Exception ex)
             {
                 if (ex is ApiException)
-                    return BadRequest(ex);
+                    return BadRequest(new { message = ex.Message });
+                else if (ex.InnerException != null && ex.InnerException.Message.StartsWith("Cannot insert duplicate key row in object 'dbo.Users' with unique index 'IX_Users_EmailId'"))
+                    return BadRequest(new { message = "A user already exists with the email id specified. Please login with this email id or register another one." });
                 return BadRequest(new { message = "Error saving new user. Please try again." });
             }
         }
