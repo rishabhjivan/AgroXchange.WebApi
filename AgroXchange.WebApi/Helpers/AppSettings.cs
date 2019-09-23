@@ -12,5 +12,7 @@ namespace AgroXchange.WebApi.Helpers
         public string PasswordSalt { get; set; }
 
         public string DBConnectionString { get; set; }
+
+        public string WebUrl { get; set; }
     }
 }

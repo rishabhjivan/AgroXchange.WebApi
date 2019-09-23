@@ -17,4 +17,10 @@ namespace AgroXchange.WebApi.Models
         public UserView User { get; set; }
         public string Token { get; set; }
     }
+
+    public class UserActivation
+    {
+        public string Email { get; set; }
+        public string Key { get; set; }
+    }
 }

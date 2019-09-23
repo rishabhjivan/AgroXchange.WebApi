@@ -51,6 +51,10 @@ namespace AgroXchange.Data.Models
         [Display(Name = "Activation Key")]
         public string ActivationKey { get; set; }
 
+        [Column(TypeName = "datetime")]
+        [Display(Name = "Activation Mail Date")]
+        public DateTime? ActivationMailDate { get; set; }
+
         [Required]
         [Column(TypeName = "bit")]
         [Display(Name = "Activated")]
@@ -64,5 +68,9 @@ namespace AgroXchange.Data.Models
         [Column(TypeName = "nvarchar(20)")]
         [Display(Name = "Password Reset Key")]
         public string PasswordResetKey { get; set; }
+
+        [Column(TypeName = "datetime")]
+        [Display(Name = "Password Reset Expiry")]
+        public DateTime? PasswordResetExpiry { get; set; }
     }
 }
