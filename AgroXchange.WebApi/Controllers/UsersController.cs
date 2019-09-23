@@ -164,5 +164,93 @@ namespace AgroXchange.WebApi.Controllers
                 return BadRequest(new { message = "Error while activating user. Please try again." });
             }
         }
+
+        [AllowAnonymous]
+        [HttpPost("password/forgot")]
+        public IActionResult ForgotPassword([FromBody]UserActivation userParam)
+        {
+            try
+            {
+                EFDataContext _dbContext = new EFDataContext();
+                User dbUser = _dbContext.Users
+                    .Where(u => u.EmailId == userParam.Email.ToLower()).FirstOrDefault();
+                if (dbUser == null)
+                    return Ok();
+                dbUser.PasswordResetKey = CryptoUtils.GenerateRandomString(20);
+                dbUser.PasswordResetExpiry = DateTime.UtcNow.AddHours(24);
+                _dbContext.SaveChanges();
+                string resetLink = _appSettings.WebUrl + "auth/reset?email=" + dbUser.EmailId + "&key=" + dbUser.PasswordResetKey;
+                Mail newMail = new Mail
+                {
+                    Subject = "AgroXchange Reset Password Request",
+                    BodyHtml = string.Format("Dear {0},<p>Upon your request, we have generated a password reset key for you to set a new password for your account. Please follow the link below either by clicking it or copy-pasting it in a browser window.</p><p>If you did not request for this, don't do anything, the reset key will expire in 24 hours.</p><p><a href=\"{1}\">{1}</a></p><p>Regards</p><p>AgroXchange</p>", dbUser.FirstName + " " + dbUser.LastName, resetLink)
+                };
+                newMail.AddToRecipient(dbUser.FirstName + " " + dbUser.LastName, dbUser.EmailId);
+                _mailService.SendMail(newMail);
+                return Ok();
+            }
+            catch (Exception ex)
+            {
+                if (ex is ApiException)
+                    return BadRequest(new { message = ex.Message });
+                return BadRequest(new { message = "Error during forgot password request. Please try again." });
+            }
+        }
+
+        [AllowAnonymous]
+        [HttpPost("password/reset")]
+        public IActionResult ResetPassword([FromBody]PasswordReset userParam)
+        {
+            try
+            {
+                EFDataContext _dbContext = new EFDataContext();
+                User dbUser = _dbContext.Users
+                    .Where(u => u.EmailId == userParam.Email.ToLower()
+                        && u.PasswordResetKey == userParam.Key).FirstOrDefault();
+                if (dbUser == null)
+                    throw new Exception();
+                if (!dbUser.PasswordResetExpiry.HasValue || dbUser.PasswordResetExpiry.Value.CompareTo(DateTime.UtcNow) < 0)
+                {
+                    throw new ApiException("Password reset key has expired. Please use the forgot password link to generate a new one.");
+                }
+                else
+                {
+                    if (!dbUser.Activated)
+                    {
+                        dbUser.Activated = true;
+                        dbUser.ActivationKey = "";
+                    }
+                    dbUser.PasswordResetExpiry = null;
+                    dbUser.PasswordResetKey = "";
+                    UserView userView = _dbContext.Users
+                        .Where(u => u.EmailId == userParam.Email.ToLower())
+                        .Select(u => new UserView
+                        {
+                            Id = u.UserId,
+                            EmailId = u.EmailId,
+                            FirstName = u.FirstName,
+                            LastName = u.LastName,
+                            Role = u.UserRole.RoleName
+                        })
+                        .FirstOrDefault();
+                    dbUser.PasswordHash = _userService.GeneratePasswordHash(userView, userParam.Password);
+                    _dbContext.SaveChanges();
+                    Mail newMail = new Mail
+                    {
+                        Subject = "AgroXchange Password Reset Successfully",
+                        BodyHtml = string.Format("Dear {0},<p>Your new password has been successfully set for your account.</p><p>If you did not execute this, please follow the forgot password flow now to reset your password.</p><p>Regards</p><p>AgroXchange</p>", dbUser.FirstName + " " + dbUser.LastName)
+                    };
+                    newMail.AddToRecipient(dbUser.FirstName + " " + dbUser.LastName, dbUser.EmailId);
+                    _mailService.SendMail(newMail);
+                }
+                return Ok();
+            }
+            catch (Exception ex)
+            {
+                if (ex is ApiException)
+                    return BadRequest(new { message = ex.Message });
+                return BadRequest(new { message = "Error while reseting password. Please try again." });
+            }
+        }
     }
 }

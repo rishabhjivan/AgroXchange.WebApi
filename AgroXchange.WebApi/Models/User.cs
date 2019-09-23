@@ -23,4 +23,11 @@ namespace AgroXchange.WebApi.Models
         public string Email { get; set; }
         public string Key { get; set; }
     }
+
+    public class PasswordReset
+    {
+        public string Email { get; set; }
+        public string Key { get; set; }
+        public string Password { get; set; }
+    }
 }
